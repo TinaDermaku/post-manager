@@ -19,23 +19,28 @@ export const postsApi = {
   getPosts: async (filters: PostFilters) => {
     await delay(DELAY);
     let posts = getStoredPosts();
-    
+
     if (filters.search) {
-      const searchLower = filters.search.toLowerCase();
-      posts = posts.filter(post => 
-        post.title.toLowerCase().includes(searchLower) || 
-        post.author.toLowerCase().includes(searchLower)
-      );
+      const searchLower = filters.search.toLowerCase().trim();
+      posts = posts.filter(post => {
+        const titleWords = post.title.toLowerCase().split(/\s+/);
+        const authorWords = post.author.toLowerCase().split(/\s+/);
+
+        const exactTitleMatch = titleWords.some(word => word === searchLower);
+        const exactAuthorMatch = authorWords.some(word => word === searchLower);
+
+        return exactTitleMatch || exactAuthorMatch;
+      });
     }
-    
+
     if (filters.status && filters.status !== 'all') {
       posts = posts.filter(post => post.status === filters.status);
     }
-    
+
     const total = posts.length;
     const start = (filters.page - 1) * filters.pageSize;
     const paginatedPosts = posts.slice(start, start + filters.pageSize);
-    
+
     return { posts: paginatedPosts, total };
   },
 
@@ -48,10 +53,10 @@ export const postsApi = {
   createPost: async (postData: Omit<IPost, 'id' | 'createdAt' | 'updatedAt'>) => {
     await delay(DELAY);
     const posts = getStoredPosts();
-    const newPost: IPost = { 
-      ...postData, 
-      id: generateId(), 
-      createdAt: new Date().toISOString() 
+    const newPost: IPost = {
+      ...postData,
+      id: generateId(),
+      createdAt: new Date().toISOString()
     };
     posts.unshift(newPost);
     setStoredPosts(posts);
@@ -63,11 +68,11 @@ export const postsApi = {
     const posts = getStoredPosts();
     const index = posts.findIndex(p => p.id === id);
     if (index === -1) throw new Error('Post not found');
-    
-    const updatedPost: IPost = { 
-      ...posts[index], 
-      ...postData, 
-      updatedAt: new Date().toISOString() 
+
+    const updatedPost: IPost = {
+      ...posts[index],
+      ...postData,
+      updatedAt: new Date().toISOString()
     };
     posts[index] = updatedPost;
     setStoredPosts(posts);
